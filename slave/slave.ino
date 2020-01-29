@@ -1,3 +1,41 @@
+/**
+ *    Slave.ino
+ *    Written by: Shawn Victor & Cole Morgan
+ *    Date Last Mod: 1/29/20
+ */
+
+#define DEVICE_ID 0
+#define SERIAL_MONITOR_BAUD 9600
+#define XBEE_BAUD 9600
+
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+
+
+//Global Data Variables
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
+
+float quat_w = 0.0;
+float quat_x = 0.0;
+float quat_y = 0.0;
+float quat_z = 0.0;
+
+
+void setup() 
+{
+  
+  
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+
 float quatDiff(float q[4], float r[4]) {
   float qDiff[4] = {0};
   float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
@@ -18,14 +56,4 @@ float quatDiff(float q[4], float r[4]) {
   
   angle = 180*2*acos(qDiff[0])/PI;
   return angle;
-}
-
-void setup() {
-  // put your setup code here, to run once:
-
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
 }
