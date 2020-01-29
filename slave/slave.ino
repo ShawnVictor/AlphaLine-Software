@@ -7,6 +7,8 @@
 #define DEVICE_ID 0
 #define SERIAL_MONITOR_BAUD 9600
 #define XBEE_BAUD 9600
+#define SERIAL_MONITOR Serial
+#define SERIAL_XBEE Serial3
 
 
 #include <Wire.h>
@@ -31,8 +33,8 @@ int ledState = LOW;
 
 void setup() 
 {
-  Serial.begin(9600);
-  Serial3.begin(9600);
+  SERIAL_MONITOR.begin(9600);
+  SERIAL_XBEE.begin(9600);
 
   heartbeatTimer.begin(blinker, 250000);
   dataPushTimer.begin(serialPushData, 250000);
@@ -50,22 +52,23 @@ void loop()
 
 void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
 {
-  Serial3.println();
-  Serial3.print(DEVICE_ID);
-  Serial3.print("{");
+  SERIAL_XBEE.println();
+  SERIAL_XBEE.print(DEVICE_ID);
+  SERIAL_XBEE.print("{");
 
-  Serial3.print(quat_w);
-  Serial3.print(",");
-  Serial3.print(quat_x);
-  Serial3.print(",");
-  Serial3.print(quat_y);
-  Serial3.print(",");
-  Serial3.print(quat_z);
+  SERIAL_XBEE.print(quat_w);
+  SERIAL_XBEE.print(",");
+  SERIAL_XBEE.print(quat_x);
+  SERIAL_XBEE.print(",");
+  SERIAL_XBEE.print(quat_y);
+  SERIAL_XBEE.print(",");
+  SERIAL_XBEE.print(quat_z);
   
-  Serial3.print("}");
-  Serial.print("Data Packet Sent @ time ");
-  Serial.print(micros());
-  Serial.println(" us");
+  SERIAL_XBEE.print("}");
+  
+  SERIAL_MONITOR.print("Data Packet Sent @ time ");
+  SERIAL_MONITOR.print(micros());
+  SERIAL_MONITOR.println(" us");
 }
 
 
