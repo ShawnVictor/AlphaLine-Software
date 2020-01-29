@@ -17,26 +17,61 @@
 
 //Global Data Variables
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
+IntervalTimer heartbeatTimer;
+IntervalTimer dataPushTimer;
 
 float quat_w = 0.0;
 float quat_x = 0.0;
 float quat_y = 0.0;
 float quat_z = 0.0;
 
+int ledState = LOW;
+
+
 
 void setup() 
 {
-  
-  
+  Serial.begin(9600);
+  Serial3.begin(9600);
 
+  heartbeatTimer.begin(blinker, 250000);
+  dataPushTimer.begin(serialPushData, 250000);
 }
 
-void loop() {
+
+
+void loop() 
+{
   // put your main code here, to run repeatedly:
-
+  interrupts();
 }
 
-float quatDiff(float q[4], float r[4]) {
+
+
+void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
+{
+  Serial3.println();
+  Serial3.print(DEVICE_ID);
+  Serial3.print("{");
+
+  Serial3.print(quat_w);
+  Serial3.print(",");
+  Serial3.print(quat_x);
+  Serial3.print(",");
+  Serial3.print(quat_y);
+  Serial3.print(",");
+  Serial3.print(quat_z);
+  
+  Serial3.print("}");
+  Serial.print("Data Packet Sent @ time ");
+  Serial.print(micros());
+  Serial.println(" us");
+}
+
+
+
+float quatDiff(float q[4], float r[4]) 
+{
   float qDiff[4] = {0};
   float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
   float angle;
@@ -56,4 +91,13 @@ float quatDiff(float q[4], float r[4]) {
   
   angle = 180*2*acos(qDiff[0])/PI;
   return angle;
+}
+
+
+
+void blinker()
+{
+  if(ledState == LOW){ledState = HIGH;}
+  else{ledState = LOW;}
+  digitalWrite(13, ledState);
 }
