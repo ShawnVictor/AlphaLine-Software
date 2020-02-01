@@ -33,11 +33,19 @@ int ledState = LOW;
 
 void setup() 
 {
+  pinMode(13, OUTPUT);
   SERIAL_MONITOR.begin(9600);
   SERIAL_XBEE.begin(9600);
 
+  if(!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
+
   heartbeatTimer.begin(blinker, 250000);
-  dataPushTimer.begin(serialPushData, 250000);
+  dataPushTimer.begin(testSerialPushData, 250000);
 }
 
 
@@ -46,23 +54,52 @@ void loop()
 {
   // put your main code here, to run repeatedly:
   interrupts();
+  Serial3.println("Cole likes bad wiring!");
+  Serial.println("message sent");
+  delay(1000);
 }
 
 
 
+void testSerialPushData()
+{
+  imu::Quaternion quat = bno.getQuat();
+  
+  SERIAL_MONITOR.println();
+  SERIAL_MONITOR.print(DEVICE_ID);
+  SERIAL_MONITOR.print("{");
+
+  SERIAL_MONITOR.print(quat.w());
+  SERIAL_MONITOR.print(",");
+  SERIAL_MONITOR.print(quat.x());
+  SERIAL_MONITOR.print(",");
+  SERIAL_MONITOR.print(quat.y());
+  SERIAL_MONITOR.print(",");
+  SERIAL_MONITOR.print(quat.z());
+  
+  SERIAL_MONITOR.print("}");
+  
+  SERIAL_MONITOR.print("Data Packet Sent @ time ");
+  SERIAL_MONITOR.print(micros());
+  SERIAL_MONITOR.println(" us");
+}
+
+
 void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
 {
+  imu::Quaternion quat = bno.getQuat();
+  
   SERIAL_XBEE.println();
   SERIAL_XBEE.print(DEVICE_ID);
   SERIAL_XBEE.print("{");
 
-  SERIAL_XBEE.print(quat_w);
+  SERIAL_XBEE.print(quat.w());
   SERIAL_XBEE.print(",");
-  SERIAL_XBEE.print(quat_x);
+  SERIAL_XBEE.print(quat.x());
   SERIAL_XBEE.print(",");
-  SERIAL_XBEE.print(quat_y);
+  SERIAL_XBEE.print(quat.y());
   SERIAL_XBEE.print(",");
-  SERIAL_XBEE.print(quat_z);
+  SERIAL_XBEE.print(quat.z());
   
   SERIAL_XBEE.print("}");
   
