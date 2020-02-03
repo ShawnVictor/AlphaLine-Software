@@ -45,7 +45,7 @@ void setup()
   }
 
   heartbeatTimer.begin(blinker, 250000);
-  dataPushTimer.begin(testSerialPushData, 250000);
+  dataPushTimer.begin(serialPushData, 250000);
 }
 
 
@@ -54,8 +54,6 @@ void loop()
 {
   // put your main code here, to run repeatedly:
   interrupts();
-  Serial3.println("Cole likes bad wiring!");
-  Serial.println("message sent");
   delay(1000);
 }
 
