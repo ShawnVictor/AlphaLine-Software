@@ -10,6 +10,7 @@
 #define BLE_SERIAL Serial2
 #define BLE_SERIAL_TX 9 // Can be 9, 26
 #define BLE_SERIAL_RX 10 // Can be 10, 31
+#define MODULE_ID 2
 
 // Current quaternion data
 //     0
@@ -77,33 +78,33 @@ void parseZigbeeData(String s)
   moduleID = subarray.toInt();
   
   // Parse q0
-  Serial.print("q0:");
+//  Serial.print("q0:");
   subarray = currentString.substring(currentString.indexOf("{")+1, currentString.indexOf(","));
-  Serial.println(subarray);
+//  Serial.println(subarray);
   quats[moduleID][0] = subarray.toFloat();
   currentString = currentString.substring(currentString.indexOf(",")+1);
 //  Serial.print(currentString);
 
   // Parse q1
-  Serial.print("q1:");
+//  Serial.print("q1:");
   subarray = currentString.substring(0, currentString.indexOf(","));
-  Serial.println(subarray);
+//  Serial.println(subarray);
   quats[moduleID][1] = subarray.toFloat();
   currentString = currentString.substring(currentString.indexOf(",")+1);
 //  Serial.print(currentString);
   
   // Parse q2
-  Serial.print("q2:");
+//  Serial.print("q2:");
   subarray = currentString.substring(0, currentString.indexOf(","));
-  Serial.println(subarray);
+//  Serial.println(subarray);
   quats[moduleID][2] = subarray.toFloat();
   currentString = currentString.substring(currentString.indexOf(",")+1);
 //  Serial.print(currentString);
 
   // Parse q3
-  Serial.print("q3:");
+//  Serial.print("q3:");
   subarray = currentString.substring(0, currentString.indexOf("}"));
-  Serial.println(subarray);
+//  Serial.println(subarray);
   quats[moduleID][3] = subarray.toFloat();
 }
 
@@ -150,9 +151,9 @@ void loop() {
     {
       //Serial.write(dataLine.c_str());
       //Serial.write("\n");
-      Serial.println(dataLine);
+//      Serial.println(dataLine);
       parseZigbeeData(dataLine);
-      printQuats();
+//      printQuats();
       dataLine = "";
       newQuatData = true;
     }
@@ -161,16 +162,32 @@ void loop() {
       dataLine += c; //append text to end of command
     }
   }
+  // Calculate angle between slave and master
+  float localQuat[4];
+  localQuat[0] = quat.w();
+  quats[MODULE_ID][0] = quat.w();
+  localQuat[1] = quat.x();
+  quats[MODULE_ID][1] = quat.x();
+  localQuat[2] = quat.y();
+  quats[MODULE_ID][2] = quat.y();
+  localQuat[3] = quat.z();
+  quats[MODULE_ID][3] = quat.z();
+  float angle = quatDiff(localQuat, quats[0]);
+//  Serial.println(angle);
   // Transmit angles through BLE
   if(newQuatData) {
-    String uartTx = ""; // "AT+BLEUARTTX={";
+    String uartTx = "{";
     for(int i = 0; i < 5; i++) {
-      uartTx += quatDiff(quats[i], quats[i+1]);
+//      uartTx += String(quatDiff(quats[i], quats[i+1]));
+      uartTx += String(quatDiff(quats[0], quats[1]));
       uartTx += ",";
     }
-    uartTx += quatDiff(quats[5], quats[6]);
-    // uartTx += "}";
-    BLE_SERIAL.write(uartTx.c_str());
+//    uartTx += quatDiff(quats[5], quats[6]);
+    uartTx += quatDiff(quats[1], quats[2]);
+    uartTx += "}";
+    uartTx += "\n";
+    Serial.write(uartTx.c_str());
+//    BLE_SERIAL.write(uartTx.c_str());
 
     newQuatData = false;
   }
