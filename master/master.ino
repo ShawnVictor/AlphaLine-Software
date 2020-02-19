@@ -48,6 +48,72 @@ float quatDiff(float q[4], float r[4]) {
   angle = 180*2*acos(qDiff[0])/PI;
   return angle;
 }
+void quatDiffRaw(float q[4], float r[4], float dest[4]) {
+  float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
+  dest[0] = (rConj[0]*q[0]-rConj[1]*q[1]-rConj[2]*q[2]-rConj[3]*q[3]);
+  dest[1] = (rConj[0]*q[1]+rConj[1]*q[0]-rConj[2]*q[3]+rConj[3]*q[2]);
+  dest[2] = (rConj[0]*q[2]+rConj[1]*q[3]+rConj[2]*q[0]-rConj[3]*q[1]);
+  dest[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
+}
+
+int minDataLength = 22;
+
+void printQuats(void) {
+  for(int i = 0; i < 7; i++) {
+    Serial.print("Device #"); Serial.println(i);
+    for(int j = 0; j < 4; j++) { 
+      Serial.print("Q");Serial.print(j); Serial.print(": "); Serial.println(quats[i][j]);
+    }
+  }
+}
+
+void parseZigbeeData(String s)
+{
+  if(s.length() == 0 || s.length() < minDataLength) 
+  {
+    s = "";
+    return;
+  }
+
+  String currentString = s;
+  String subarray = "";
+  int moduleID;
+  //Serial.print("This is the substring: ");
+  
+  // Parse Module ID
+  subarray = currentString.substring(0, s.indexOf("{"));
+  moduleID = subarray.toInt();
+  
+  // Parse q0
+//  Serial.print("q0:");
+  subarray = currentString.substring(currentString.indexOf("{")+1, currentString.indexOf(","));
+//  Serial.println(subarray);
+  quats[moduleID][0] = subarray.toFloat();
+  currentString = currentString.substring(currentString.indexOf(",")+1);
+//  Serial.print(currentString);
+
+  // Parse q1
+//  Serial.print("q1:");
+  subarray = currentString.substring(0, currentString.indexOf(","));
+//  Serial.println(subarray);
+  quats[moduleID][1] = subarray.toFloat();
+  currentString = currentString.substring(currentString.indexOf(",")+1);
+//  Serial.print(currentString);
+  
+  // Parse q2
+//  Serial.print("q2:");
+  subarray = currentString.substring(0, currentString.indexOf(","));
+//  Serial.println(subarray);
+  quats[moduleID][2] = subarray.toFloat();
+  currentString = currentString.substring(currentString.indexOf(",")+1);
+//  Serial.print(currentString);
+
+  // Parse q3
+//  Serial.print("q3:");
+  subarray = currentString.substring(0, currentString.indexOf("}"));
+//  Serial.println(subarray);
+  quats[moduleID][3] = subarray.toFloat();
+}
 
 int minDataLength = 22;
 
@@ -187,7 +253,7 @@ void loop() {
     uartTx += "}";
     uartTx += "\n";
     Serial.write(uartTx.c_str());
-//    BLE_SERIAL.write(uartTx.c_str());
+    BLE_SERIAL.write(uartTx.c_str());
 
     newQuatData = false;
   }
