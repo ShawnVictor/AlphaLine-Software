@@ -115,65 +115,6 @@ void parseZigbeeData(String s)
   quats[moduleID][3] = subarray.toFloat();
 }
 
-int minDataLength = 22;
-
-void printQuats(void) {
-  for(int i = 0; i < 7; i++) {
-    Serial.print("Device #"); Serial.println(i);
-    for(int j = 0; j < 4; j++) { 
-      Serial.print("Q");Serial.print(j); Serial.print(": "); Serial.println(quats[i][j]);
-    }
-  }
-}
-
-void parseZigbeeData(String s)
-{
-  if(s.length() == 0 || s.length() < minDataLength) 
-  {
-    s = "";
-    return;
-  }
-
-  String currentString = s;
-  String subarray = "";
-  int moduleID;
-  //Serial.print("This is the substring: ");
-  
-  // Parse Module ID
-  subarray = currentString.substring(0, s.indexOf("{"));
-  moduleID = subarray.toInt();
-  
-  // Parse q0
-//  Serial.print("q0:");
-  subarray = currentString.substring(currentString.indexOf("{")+1, currentString.indexOf(","));
-//  Serial.println(subarray);
-  quats[moduleID][0] = subarray.toFloat();
-  currentString = currentString.substring(currentString.indexOf(",")+1);
-//  Serial.print(currentString);
-
-  // Parse q1
-//  Serial.print("q1:");
-  subarray = currentString.substring(0, currentString.indexOf(","));
-//  Serial.println(subarray);
-  quats[moduleID][1] = subarray.toFloat();
-  currentString = currentString.substring(currentString.indexOf(",")+1);
-//  Serial.print(currentString);
-  
-  // Parse q2
-//  Serial.print("q2:");
-  subarray = currentString.substring(0, currentString.indexOf(","));
-//  Serial.println(subarray);
-  quats[moduleID][2] = subarray.toFloat();
-  currentString = currentString.substring(currentString.indexOf(",")+1);
-//  Serial.print(currentString);
-
-  // Parse q3
-//  Serial.print("q3:");
-  subarray = currentString.substring(0, currentString.indexOf("}"));
-//  Serial.println(subarray);
-  quats[moduleID][3] = subarray.toFloat();
-}
-
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
