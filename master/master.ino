@@ -130,9 +130,10 @@ void parseZigbeeData(String s)
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   ZIGBEE_SERIAL.begin(BAUD_RATE); 
   BLE_SERIAL.begin(BAUD_RATE); 
+  pinMode(13, OUTPUT);
 
   /* Initialise the sensor */
   if(!bno.begin())
@@ -168,6 +169,7 @@ void loop() {
   if(ZIGBEE_SERIAL.available())
   {
     c = ZIGBEE_SERIAL.read();
+    Serial.write(c);
     if(c == '\n')
     {
       //Serial.write(dataLine.c_str());
@@ -177,8 +179,8 @@ void loop() {
       else{ledState = LOW;}
       digitalWrite(13, ledState);
 
-      Serial.println(dataLine);
-      parseZigbeeData(dataLine);
+//      Serial.println(dataLine);
+      //parseZigbeeData(dataLine);
 //      printQuats();
       dataLine = "";
       newQuatData = true;
@@ -200,6 +202,7 @@ void loop() {
   quats[MODULE_ID][3] = quat.z();
   float angle = quatDiff(localQuat, quats[0]);
 //  Serial.println(angle);
+  newQuatData = false;
   // Transmit angles through BLE
   if(newQuatData) {
     String uartTx = "{";
@@ -212,7 +215,7 @@ void loop() {
 //    uartTx += quatDiff(quats[1], quats[2]);
     uartTx += "}";
     uartTx += "\n";
-    Serial.write(uartTx.c_str());
+//    Serial.write(uartTx.c_str());
     BLE_SERIAL.write(uartTx.c_str());
 
     newQuatData = false;
