@@ -4,7 +4,7 @@
  *    Date Last Mod: 1/29/20
  */
 
-#define DEVICE_ID 0
+#define DEVICE_ID 1
 #define SERIAL_MONITOR_BAUD 9600
 #define XBEE_BAUD 9600
 #define SERIAL_MONITOR Serial

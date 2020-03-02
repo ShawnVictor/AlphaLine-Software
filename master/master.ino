@@ -38,6 +38,8 @@ float quatDiff(float q[4], float r[4]) {
   qDiff[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
   
   float norm = (qDiff[0]*qDiff[0]+qDiff[1]*qDiff[1]+qDiff[2]*qDiff[2]+qDiff[3]*qDiff[3]);
+  if(norm == 0)
+    return 0;
   norm = sqrt(norm);
   
   qDiff[0] /= norm;
@@ -46,6 +48,17 @@ float quatDiff(float q[4], float r[4]) {
   qDiff[3] /= norm;
   
   angle = 180*2*acos(qDiff[0])/PI;
+  // Get principal angle
+  if(angle > 90 && angle < 180) {
+    angle = 180-angle;
+  }
+  else if(angle > 180 && angle < 270) {
+    angle = angle-180;
+  }
+  else if(angle > 270 && angle < 360) {
+    angle = 360-angle;
+  }
+  
   return angle;
 }
 void quatDiffRaw(float q[4], float r[4], float dest[4]) {
@@ -135,6 +148,7 @@ void setup() {
 }
 
 String dataLine;
+int ledState;
 void loop() {
   // put your main code here, to run repeatedly:
   // Get local quaternion
@@ -158,7 +172,12 @@ void loop() {
     {
       //Serial.write(dataLine.c_str());
       //Serial.write("\n");
-//      Serial.println(dataLine);
+
+      if(ledState == LOW){ledState = HIGH;}
+      else{ledState = LOW;}
+      digitalWrite(13, ledState);
+
+      Serial.println(dataLine);
       parseZigbeeData(dataLine);
 //      printQuats();
       dataLine = "";
@@ -185,12 +204,12 @@ void loop() {
   if(newQuatData) {
     String uartTx = "{";
     for(int i = 0; i < 5; i++) {
-//      uartTx += String(quatDiff(quats[i], quats[i+1]));
-      uartTx += String(quatDiff(quats[0], quats[1]));
+      uartTx += String(quatDiff(quats[i], quats[i+1]));
+//      uartTx += String(quatDiff(quats[0], quats[1]));
       uartTx += ",";
     }
-//    uartTx += quatDiff(quats[5], quats[6]);
-    uartTx += quatDiff(quats[1], quats[2]);
+    uartTx += quatDiff(quats[5], quats[6]);
+//    uartTx += quatDiff(quats[1], quats[2]);
     uartTx += "}";
     uartTx += "\n";
     Serial.write(uartTx.c_str());
