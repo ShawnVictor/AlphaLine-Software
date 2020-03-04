@@ -24,11 +24,13 @@
 // 4 - 5 - 6
 
 float quats[7][4];
-bool newQuatData = false;
+float angles[7];
+//bool newQuatData = false;
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 imu::Quaternion quat;
 IntervalTimer bnoSample;
+IntervalTimer bleTx;
 
 float quatDiff(float q[4], float r[4]) {
   float qDiff[4] = {0};
@@ -51,15 +53,15 @@ float quatDiff(float q[4], float r[4]) {
   
   angle = 180*2*acos(qDiff[0])/PI;
   // Get principal angle
-  if(angle > 90 && angle < 180) {
-    angle = 180-angle;
-  }
-  else if(angle > 180 && angle < 270) {
-    angle = angle-180;
-  }
-  else if(angle > 270 && angle < 360) {
-    angle = 360-angle;
-  }
+//  if(angle > 90 && angle < 180) {
+//    angle = 180-angle;
+//  }
+//  else if(angle > 180 && angle < 270) {
+//    angle = angle-180;
+//  }
+//  else if(angle > 270 && angle < 360) {
+//    angle = 360-angle;
+//  }
   
   return angle;
 }
@@ -128,11 +130,22 @@ void parseZigbeeData(String s)
   subarray = currentString.substring(0, currentString.indexOf("}"));
 //  Serial.println(subarray);
   quats[moduleID][3] = subarray.toFloat();
+
+  if(moduleID == 0) {
+    angles[0] = quatDiff(quats[0], quats[1]);
+  }
+  else if(moduleID == 4) {
+    angles[3] = quatDiff(quats[4], quats[5]);
+  }
+  else {
+    angles[moduleID-1] = quatDiff(quats[moduleID-1], quats[moduleID]);
+    angles[moduleID] = quatDiff(quats[moduleID], quats[moduleID+1]);
+  }
 }
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   ZIGBEE_SERIAL.begin(BAUD_RATE); 
   BLE_SERIAL.begin(BAUD_RATE); 
   pinMode(13, OUTPUT);
@@ -144,16 +157,60 @@ void setup() {
     Serial.write("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
-  bnoSample.begin(sampleBNO, 250000);
+  
+//  
   
   delay(1000);
-    
   bno.setExtCrystalUse(true);
+  delay(1000);
+
+  bnoSample.priority(1);
+  bleTx.priority(0);
+  bnoSample.begin(sampleBNO, 50000);
+  bleTx.begin(bleTransmit, 100000);
+  
+
 }
 
 void sampleBNO()
 {
+  Serial.write("in BNO routine\n");
   quat = bno.getQuat();
+  //bleTransmit();
+}
+
+int packetCnt = 0;
+void bleTransmit() {
+  Serial.write("in BLE routine\n");
+  // Calculate angle between slave and master
+//  float localQuat[4];
+//  localQuat[0] = quat.w();
+//  quats[MODULE_ID][0] = quat.w();
+//  localQuat[1] = quat.x();
+//  quats[MODULE_ID][1] = quat.x();
+//  localQuat[2] = quat.y();
+//  quats[MODULE_ID][2] = quat.y();
+//  localQuat[3] = quat.z();
+//  quats[MODULE_ID][3] = quat.z();
+//  float angle = quatDiff(localQuat, quats[0]);
+//  Serial.println(angle);
+  //newQuatData = false;
+  // Transmit angles through BLE
+  String uartTx = "{";
+  for(int i = 0; i < 5; i++) {
+    uartTx += String(angles[i]);
+//      uartTx += String(quatDiff(quats[0], quats[1]));
+    uartTx += ",";
+  }
+  uartTx += angles[5];
+  uartTx += ",";
+  uartTx += packetCnt++;
+//    uartTx += quatDiff(quats[1], quats[2]);
+  uartTx += "}";
+  uartTx += "\n";
+//    Serial.write(uartTx.c_str());
+  BLE_SERIAL.write(uartTx.c_str());
+
 }
 
 String dataLine;
@@ -173,10 +230,11 @@ void loop() {
 //  Serial.print("\n");
   // Read from Zigbee serial if available
   char c;
-  
+  noInterrupts();
   if(ZIGBEE_SERIAL.available())
   {
     c = ZIGBEE_SERIAL.read();
+    interrupts();
     //Serial.write(ZIGBEE_SERIAL.read());
     if(c == '\n')
     {
@@ -188,47 +246,17 @@ void loop() {
       digitalWrite(13, ledState);
 
       Serial.println(dataLine);
+      noInterrupts();
       parseZigbeeData(dataLine);
+      interrupts();
 //      printQuats();
       dataLine = "";
-      newQuatData = true;
     }
     else
     {
       dataLine += c; //append text to end of command
     }
     
-  }
-  
-  // Calculate angle between slave and master
-  float localQuat[4];
-  localQuat[0] = quat.w();
-  quats[MODULE_ID][0] = quat.w();
-  localQuat[1] = quat.x();
-  quats[MODULE_ID][1] = quat.x();
-  localQuat[2] = quat.y();
-  quats[MODULE_ID][2] = quat.y();
-  localQuat[3] = quat.z();
-  quats[MODULE_ID][3] = quat.z();
-  float angle = quatDiff(localQuat, quats[0]);
-//  Serial.println(angle);
-  //newQuatData = false;
-  // Transmit angles through BLE
-  if(newQuatData) {
-    String uartTx = "{";
-    for(int i = 0; i < 5; i++) {
-      uartTx += String(quatDiff(quats[i], quats[i+1]));
-//      uartTx += String(quatDiff(quats[0], quats[1]));
-      uartTx += ",";
-    }
-    uartTx += quatDiff(quats[5], quats[6]);
-//    uartTx += quatDiff(quats[1], quats[2]);
-    uartTx += "}";
-    uartTx += "\n";
-//    Serial.write(uartTx.c_str());
-    BLE_SERIAL.write(uartTx.c_str());
-
-    newQuatData = false;
-  }
-  
+  }  
+  interrupts();
 }
