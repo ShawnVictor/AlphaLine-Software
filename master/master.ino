@@ -27,6 +27,8 @@ float quats[7][4];
 bool newQuatData = false;
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
+imu::Quaternion quat;
+IntervalTimer bnoSample;
 
 float quatDiff(float q[4], float r[4]) {
   float qDiff[4] = {0};
@@ -130,7 +132,7 @@ void parseZigbeeData(String s)
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(9600);
   ZIGBEE_SERIAL.begin(BAUD_RATE); 
   BLE_SERIAL.begin(BAUD_RATE); 
   pinMode(13, OUTPUT);
@@ -142,10 +144,16 @@ void setup() {
     Serial.write("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
+  bnoSample.begin(sampleBNO, 250000);
   
   delay(1000);
     
   bno.setExtCrystalUse(true);
+}
+
+void sampleBNO()
+{
+  quat = bno.getQuat();
 }
 
 String dataLine;
@@ -153,7 +161,7 @@ int ledState;
 void loop() {
   // put your main code here, to run repeatedly:
   // Get local quaternion
-  imu::Quaternion quat = bno.getQuat();
+  
 //  Serial.print("qW: ");
 //  Serial.print(quat.w(), 4);
 //  Serial.print(" qX: ");
@@ -169,7 +177,7 @@ void loop() {
   if(ZIGBEE_SERIAL.available())
   {
     c = ZIGBEE_SERIAL.read();
-    Serial.write(c);
+    //Serial.write(ZIGBEE_SERIAL.read());
     if(c == '\n')
     {
       //Serial.write(dataLine.c_str());
@@ -179,8 +187,8 @@ void loop() {
       else{ledState = LOW;}
       digitalWrite(13, ledState);
 
-//      Serial.println(dataLine);
-      //parseZigbeeData(dataLine);
+      Serial.println(dataLine);
+      parseZigbeeData(dataLine);
 //      printQuats();
       dataLine = "";
       newQuatData = true;
@@ -189,7 +197,9 @@ void loop() {
     {
       dataLine += c; //append text to end of command
     }
+    
   }
+  
   // Calculate angle between slave and master
   float localQuat[4];
   localQuat[0] = quat.w();
@@ -202,7 +212,7 @@ void loop() {
   quats[MODULE_ID][3] = quat.z();
   float angle = quatDiff(localQuat, quats[0]);
 //  Serial.println(angle);
-  newQuatData = false;
+  //newQuatData = false;
   // Transmit angles through BLE
   if(newQuatData) {
     String uartTx = "{";
@@ -220,4 +230,5 @@ void loop() {
 
     newQuatData = false;
   }
+  
 }
