@@ -176,6 +176,12 @@ void sampleBNO()
 {
   Serial.write("in BNO routine\n");
   quat = bno.getQuat();
+  quats[MODULE_ID][0] = quat.w();
+  quats[MODULE_ID][1] = quat.x();
+  quats[MODULE_ID][2] = quat.y();
+  quats[MODULE_ID][3] = quat.z();
+  angles[MODULE_ID-1] = quatDiff(quats[MODULE_ID-1], quats[MODULE_ID]);
+  angles[MODULE_ID] = quatDiff(quats[MODULE_ID], quats[MODULE_ID+1]);
   //bleTransmit();
 }
 
