@@ -4,7 +4,7 @@
  *    Date Last Mod: 1/29/20
  */
 
-#define DEVICE_ID 3
+#define DEVICE_ID 4
 #define SERIAL_MONITOR_BAUD 9600
 #define XBEE_BAUD 9600
 //#define SERIAL_MONITOR Serial
@@ -17,6 +17,7 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
+uint8_t systemCal, gyro, accel, mag;
 
 //Global Data Variables
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
@@ -35,6 +36,7 @@ SoftwareSerial SERIAL_XBEE(3,2);
 
 void setup() 
 {
+  Serial.begin(9600);
   pinMode(13, OUTPUT);
 //  SERIAL_MONITOR.begin(9600);
   SERIAL_XBEE.begin(9600);
@@ -46,6 +48,14 @@ void setup()
     while(1);
   }
 
+  Serial.write("Calibrating\n");
+  do {
+    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//    Serial.write(".");
+    Serial.println(systemCal);
+    delay(1000);
+  } while(systemCal != 3);
+
   //heartbeatTimer.begin(blinker, 250000);
   //dataPushTimer.begin(serialPushData, 250000);
 }
@@ -55,8 +65,8 @@ void setup()
 void loop() 
 {
   // put your main code here, to run repeatedly:
-  interrupts();
-  delayMicroseconds(250000);
+  //interrupts();
+  delay(500);
   serialPushData();
   blinker();
 }
@@ -89,6 +99,11 @@ void testSerialPushData()
 
 void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
 {
+//  do {
+//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//    Serial.println(systemCal);
+//  } while(systemCal != 3);
+  
   imu::Quaternion quat = bno.getQuat();
   
   SERIAL_XBEE.println();

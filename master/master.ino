@@ -27,6 +27,8 @@ float quats[7][4];
 float angles[7];
 //bool newQuatData = false;
 
+uint8_t systemCal, gyro, accel, mag;
+
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 imu::Quaternion quat;
 IntervalTimer bnoSample;
@@ -53,15 +55,15 @@ float quatDiff(float q[4], float r[4]) {
   
   angle = 180*2*acos(qDiff[0])/PI;
   // Get principal angle
-//  if(angle > 90 && angle < 180) {
-//    angle = 180-angle;
-//  }
-//  else if(angle > 180 && angle < 270) {
-//    angle = angle-180;
-//  }
-//  else if(angle > 270 && angle < 360) {
-//    angle = 360-angle;
-//  }
+  if(angle > 90 && angle < 180) {
+    angle = 180-angle;
+  }
+  else if(angle > 180 && angle < 270) {
+    angle = 180-angle;
+  }
+  else if(angle > 270 && angle < 360) {
+    angle = angle-360;
+  }
   
   return angle;
 }
@@ -157,24 +159,37 @@ void setup() {
     Serial.write("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
-  
+ 
 //  
   
   delay(1000);
   bno.setExtCrystalUse(true);
   delay(1000);
 
+  Serial.write("Calibrating\n");
+  do {
+    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//    Serial.write(".");
+    Serial.println(systemCal);
+    delay(1000);
+  } while(systemCal != 3);
+    
+  digitalWrite(13, HIGH);
+
   bnoSample.priority(1);
   bleTx.priority(0);
-  bnoSample.begin(sampleBNO, 50000);
-  bleTx.begin(bleTransmit, 100000);
+  bnoSample.begin(sampleBNO, 250000);
+  bleTx.begin(bleTransmit, 500000);
   
-
 }
 
 void sampleBNO()
 {
   Serial.write("in BNO routine\n");
+//  do {
+//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//  }while(systemCal != 3);
+  
   quat = bno.getQuat();
   quats[MODULE_ID][0] = quat.w();
   quats[MODULE_ID][1] = quat.x();
@@ -246,7 +261,6 @@ void loop() {
     {
       //Serial.write(dataLine.c_str());
       //Serial.write("\n");
-
       if(ledState == LOW){ledState = HIGH;}
       else{ledState = LOW;}
       digitalWrite(13, ledState);

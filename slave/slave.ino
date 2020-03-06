@@ -4,7 +4,7 @@
  *    Date Last Mod: 1/29/20
  */
 
-#define DEVICE_ID 1
+#define DEVICE_ID 0
 #define SERIAL_MONITOR_BAUD 9600
 #define XBEE_BAUD 9600
 #define SERIAL_MONITOR Serial
@@ -29,7 +29,7 @@ float quat_z = 0.0;
 
 int ledState = LOW;
 
-
+uint8_t systemCal, gyro, accel, mag;
 
 void setup() 
 {
@@ -44,8 +44,18 @@ void setup()
     while(1);
   }
 
+  digitalWrite(13, HIGH);
+  
+  Serial.write("Calibrating\n");
+  do {
+    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//    Serial.write(".");
+    Serial.println(systemCal);
+    delay(1000);
+  } while(systemCal != 3);
+
   heartbeatTimer.begin(blinker, 250000);
-  dataPushTimer.begin(serialPushData, 250000);
+  dataPushTimer.begin(serialPushData, 200000);
 }
 
 
@@ -61,6 +71,10 @@ void loop()
 
 void testSerialPushData()
 {
+//  do {
+//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//  }while(systemCal != 3);
+  
   imu::Quaternion quat = bno.getQuat();
   
   SERIAL_MONITOR.println();
@@ -82,9 +96,11 @@ void testSerialPushData()
   SERIAL_MONITOR.println(" us");
 }
 
-
 void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
 {
+//  while(systemCal != 3) {
+//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+//  }
   imu::Quaternion quat = bno.getQuat();
   
   SERIAL_XBEE.println();
