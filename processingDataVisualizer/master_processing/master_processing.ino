@@ -228,8 +228,6 @@ void bleTransmit() {
     uartTx += ",";
   }
   uartTx += angles[5];
-  uartTx += ",";
-  uartTx += packetCnt++;
 //    uartTx += quatDiff(quats[1], quats[2]);
   uartTx += "}";
   uartTx += "\n";
