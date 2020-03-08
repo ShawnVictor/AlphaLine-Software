@@ -1,91 +1,149 @@
+/*
+    FileName: master.ino
+    Developed by: Cole Morgan & Shawn Victor
+    Last Modified: 3/8/2020
+*/
+
+
+
+//Adding in Library Files
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
+
+
+//Setting up Serial Interfaces
 #define BAUD_RATE 9600
-#define ZIGBEE_SERIAL Serial3
-#define ZIGBEE_SERIAL_TX 7 // Can be 0, 21
-#define ZIGBEE_SERIAL_RX 8 // Can be 1, 5
 #define BLE_SERIAL Serial2
 #define BLE_SERIAL_TX 9 // Can be 9, 26
 #define BLE_SERIAL_RX 10 // Can be 10, 31
+#define ZIGBEE_SERIAL Serial3
+#define ZIGBEE_SERIAL_TX 7 // Can be 0, 21
+#define ZIGBEE_SERIAL_RX 8 // Can be 1, 5
+
+
+
+//Master ID
 #define MODULE_ID 2
 
-// Current quaternion data
-//     0
-//     |
-//     1 
-//     |
-//     2
-//     |
-//     3
-//     |
-// 4 - 5 - 6
 
+
+//Global Data
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
 float quats[7][4];
 float angles[7];
-//bool newQuatData = false;
-
 uint8_t systemCal, gyro, accel, mag;
-
-Adafruit_BNO055 bno = Adafruit_BNO055(55);
 imu::Quaternion quat;
+int minDataLength = 22;
+String dataLine;
+int ledState;
+
+
+
+//Interval Timers
 IntervalTimer bnoSample;
 IntervalTimer bleTx;
 
-float quatDiff(float q[4], float r[4]) {
-  float qDiff[4] = {0};
-  float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
-  float angle;
-  qDiff[0] = (rConj[0]*q[0]-rConj[1]*q[1]-rConj[2]*q[2]-rConj[3]*q[3]);
-  qDiff[1] = (rConj[0]*q[1]+rConj[1]*q[0]-rConj[2]*q[3]+rConj[3]*q[2]);
-  qDiff[2] = (rConj[0]*q[2]+rConj[1]*q[3]+rConj[2]*q[0]-rConj[3]*q[1]);
-  qDiff[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
-  
-  float norm = (qDiff[0]*qDiff[0]+qDiff[1]*qDiff[1]+qDiff[2]*qDiff[2]+qDiff[3]*qDiff[3]);
-  if(norm == 0)
-    return 0;
-  norm = sqrt(norm);
-  
-  qDiff[0] /= norm;
-  qDiff[1] /= norm;
-  qDiff[2] /= norm;
-  qDiff[3] /= norm;
-  
-  angle = 180*2*acos(qDiff[0])/PI;
-  // Get principal angle
-  if(angle > 90 && angle < 180) {
-    angle = 180-angle;
+
+
+void setup() 
+{
+  //Setup pin modes
+  pinMode(13, OUTPUT);
+
+
+  //Setups the Serial 
+  Serial.begin(115200);
+  ZIGBEE_SERIAL.begin(BAUD_RATE); 
+  BLE_SERIAL.begin(BAUD_RATE); 
+
+
+  //Checking IMUs for connection
+  if(!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.write("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
   }
-  else if(angle > 180 && angle < 270) {
-    angle = 180-angle;
-  }
-  else if(angle > 270 && angle < 360) {
-    angle = angle-360;
-  }
+ 
   
-  return angle;
-}
-void quatDiffRaw(float q[4], float r[4], float dest[4]) {
-  float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
-  dest[0] = (rConj[0]*q[0]-rConj[1]*q[1]-rConj[2]*q[2]-rConj[3]*q[3]);
-  dest[1] = (rConj[0]*q[1]+rConj[1]*q[0]-rConj[2]*q[3]+rConj[3]*q[2]);
-  dest[2] = (rConj[0]*q[2]+rConj[1]*q[3]+rConj[2]*q[0]-rConj[3]*q[1]);
-  dest[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
+  //Waiting for the IMU to stabilize
+  delay(1000);
+  bno.setExtCrystalUse(true);
+
+
+  //Waiting for IMU to Calibrate
+  Serial.write("Calibrating\n");
+  do 
+  {
+    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+    Serial.print("Gyro: ");
+    Serial.print(gyro);
+    Serial.print(", Mag: ");
+    Serial.println(mag);
+    delay(100);
+  } while(gyro != 3 || mag != 3);
+  digitalWrite(13, HIGH);
+
+
+  //Set Interval Timer Settings
+  bnoSample.priority(1);
+  bleTx.priority(0);
+  bnoSample.begin(sampleBNO, 250000);
+  bleTx.begin(bleTransmit, 500000);
 }
 
-int minDataLength = 22;
 
-void printQuats(void) {
-  for(int i = 0; i < 7; i++) {
-    Serial.print("Device #"); Serial.println(i);
-    for(int j = 0; j < 4; j++) { 
-      Serial.print("Q");Serial.print(j); Serial.print(": "); Serial.println(quats[i][j]);
+
+void loop() 
+{
+  //Locals
+  char c;
+
+
+  noInterrupts();
+  
+  if(ZIGBEE_SERIAL.available())
+  {
+    //Serial.println(ZIGBEE_SERIAL.available());    //Used to output Current Buffer Size
+    c = ZIGBEE_SERIAL.read();
+    //Serial.write(c);                              //Used to output the Current character being read
+    interrupts();
+    
+
+    if(c == '\n')
+    {
+      //Heartbeat Indicating the end of a packet
+      if(ledState == LOW){ledState = HIGH;}
+      else{ledState = LOW;}
+      digitalWrite(13, ledState);
+
+
+      Serial.println(dataLine);                     //Used to output the whole packet to the Serial Buffer
+      
+
+      noInterrupts();
+      parseZigbeeData(dataLine);
+      interrupts();
+
+
+      //Clear dataLine String for next packet to be stored
+      dataLine = "";
     }
-  }
+    else
+    {
+      dataLine += c;                                //append text to end of command
+    }
+  }  
+
+  interrupts();
 }
 
+
+
+//Parses the packet into the Corresponding Global Quaternion Data
 void parseZigbeeData(String s)
 {
   if(s.length() == 0 || s.length() < minDataLength) 
@@ -97,7 +155,7 @@ void parseZigbeeData(String s)
   String currentString = s;
   String subarray = "";
   int moduleID;
-  //Serial.print("This is the substring: ");
+  //Serial.print("This is the substring: ");        //can be used to see what an individual Packet Looks like
   
   // Parse Module ID
   subarray = currentString.substring(0, s.indexOf("{"));
@@ -145,46 +203,68 @@ void parseZigbeeData(String s)
   }
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  ZIGBEE_SERIAL.begin(BAUD_RATE); 
-  BLE_SERIAL.begin(BAUD_RATE); 
-  pinMode(13, OUTPUT);
 
-  /* Initialise the sensor */
-  if(!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.write("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
+
+//Calculates the angles based on Two Quaternion inputs
+float quatDiff(float q[4], float r[4]) 
+{
+  float qDiff[4] = {0};
+  float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
+  float angle;
+  qDiff[0] = (rConj[0]*q[0]-rConj[1]*q[1]-rConj[2]*q[2]-rConj[3]*q[3]);
+  qDiff[1] = (rConj[0]*q[1]+rConj[1]*q[0]-rConj[2]*q[3]+rConj[3]*q[2]);
+  qDiff[2] = (rConj[0]*q[2]+rConj[1]*q[3]+rConj[2]*q[0]-rConj[3]*q[1]);
+  qDiff[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
+  
+  float norm = (qDiff[0]*qDiff[0]+qDiff[1]*qDiff[1]+qDiff[2]*qDiff[2]+qDiff[3]*qDiff[3]);
+  if(norm == 0)
+    return 0;
+  norm = sqrt(norm);
+  
+  qDiff[0] /= norm;
+  qDiff[1] /= norm;
+  qDiff[2] /= norm;
+  qDiff[3] /= norm;
+  
+  angle = 180*2*acos(qDiff[0])/PI;
+  // Get principal angle
+  if(angle > 90 && angle < 180) {
+    angle = 180-angle;
   }
- 
-//  
+  else if(angle > 180 && angle < 270) {
+    angle = 180-angle;
+  }
+  else if(angle > 270 && angle < 360) {
+    angle = angle-360;
+  }
   
-  delay(1000);
-  bno.setExtCrystalUse(true);
-  delay(1000);
-
-  Serial.write("Calibrating\n");
-  do {
-    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
-//    Serial.write(".");
-    Serial.print("Gyro: ");
-    Serial.print(gyro);
-    Serial.print(", Mag: ");
-    Serial.println(mag);
-    delay(1000);
-  } while(gyro != 3 || mag != 3);
-    
-  digitalWrite(13, HIGH);
-
-  bnoSample.priority(1);
-  bleTx.priority(0);
-  bnoSample.begin(sampleBNO, 250000);
-  bleTx.begin(bleTransmit, 500000);
-  
+  return angle;
 }
+
+
+
+void quatDiffRaw(float q[4], float r[4], float dest[4]) 
+{
+  float rConj[4] = {r[0], -r[1], -r[2], -r[3]};
+  dest[0] = (rConj[0]*q[0]-rConj[1]*q[1]-rConj[2]*q[2]-rConj[3]*q[3]);
+  dest[1] = (rConj[0]*q[1]+rConj[1]*q[0]-rConj[2]*q[3]+rConj[3]*q[2]);
+  dest[2] = (rConj[0]*q[2]+rConj[1]*q[3]+rConj[2]*q[0]-rConj[3]*q[1]);
+  dest[3] = (rConj[0]*q[3]-rConj[1]*q[2]+rConj[2]*q[1]+rConj[3]*q[0]);
+}
+
+
+
+void printQuats(void) 
+{
+  for(int i = 0; i < 7; i++) {
+    Serial.print("Device #"); Serial.println(i);
+    for(int j = 0; j < 4; j++) { 
+      Serial.print("Q");Serial.print(j); Serial.print(": "); Serial.println(quats[i][j]);
+    }
+  }
+}
+
+
 
 void sampleBNO()
 {
@@ -236,51 +316,4 @@ void bleTransmit() {
 //    Serial.write(uartTx.c_str());
   BLE_SERIAL.write(uartTx.c_str());
 
-}
-
-String dataLine;
-int ledState;
-void loop() {
-  // put your main code here, to run repeatedly:
-  // Get local quaternion
-  
-//  Serial.print("qW: ");
-//  Serial.print(quat.w(), 4);
-//  Serial.print(" qX: ");
-//  Serial.print(quat.x(), 4);
-//  Serial.print(" qY: ");
-//  Serial.print(quat.y(), 4);
-//  Serial.print(" qZ: ");
-//  Serial.print(quat.z(), 4);
-//  Serial.print("\n");
-  // Read from Zigbee serial if available
-  char c;
-  noInterrupts();
-  if(ZIGBEE_SERIAL.available())
-  {
-    c = ZIGBEE_SERIAL.read();
-    interrupts();
-    //Serial.write(ZIGBEE_SERIAL.read());
-    if(c == '\n')
-    {
-      //Serial.write(dataLine.c_str());
-      //Serial.write("\n");
-      if(ledState == LOW){ledState = HIGH;}
-      else{ledState = LOW;}
-      digitalWrite(13, ledState);
-
-      Serial.println(dataLine);
-      noInterrupts();
-      parseZigbeeData(dataLine);
-      interrupts();
-//      printQuats();
-      dataLine = "";
-    }
-    else
-    {
-      dataLine += c; //append text to end of command
-    }
-    
-  }  
-  interrupts();
 }
