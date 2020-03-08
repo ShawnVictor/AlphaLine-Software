@@ -47,12 +47,15 @@ void setup()
   digitalWrite(13, HIGH);
   
   Serial.write("Calibrating\n");
-  do {
+    do {
     bno.getCalibration(&systemCal, &gyro, &accel, &mag);
 //    Serial.write(".");
-    Serial.println(systemCal);
+    Serial.print("Gyro: ");
+    Serial.print(gyro);
+    Serial.print(", Mag: ");
+    Serial.println(mag);
     delay(1000);
-  } while(systemCal != 3);
+  } while(gyro != 3 || mag != 3);
 
   heartbeatTimer.begin(blinker, 250000);
   dataPushTimer.begin(serialPushData, 200000);
@@ -71,9 +74,11 @@ void loop()
 
 void testSerialPushData()
 {
-//  do {
-//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
-//  }while(systemCal != 3);
+  bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+  if(gyro != 3 || mag != 3) {
+    Serial.println("Did not read IMU data");
+    return;
+  }
   
   imu::Quaternion quat = bno.getQuat();
   
@@ -98,9 +103,12 @@ void testSerialPushData()
 
 void serialPushData() // PACKEET FORMAT: ID{QUAT_W,QUAT_X,QUAT_Y,QUAT_Z}
 {
-//  while(systemCal != 3) {
-//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
-//  }
+  bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+  if(gyro != 3 || accel != 3) {
+    Serial.println("Did not read IMU data");
+    return;
+  }
+  
   imu::Quaternion quat = bno.getQuat();
   
   SERIAL_XBEE.println();
