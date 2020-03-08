@@ -266,6 +266,40 @@ void printQuats(void)
 
 
 
+int checkData(String s) {
+  String subStr;
+  String curStr = s;
+
+  // Check id length
+  id = curStr.substring(0, curStr.indexOf("{"));
+  if(id.length() != 1)
+    return 0;
+  // Update current string
+  curStr = curStr.substring(curStr.indexOf("{")+1);
+
+  // Verify angle formatting
+  for(int i = 0; i < 6; i++) {
+    subStr = curStr.substring(0, curStr.indexOf(","));
+    subStr = subStr.replace("-", "");
+    if(subStr.substring(0, ".").length() != 1)
+      return 0;
+    if(subStr.substring(subStr.indexOf(".")+1).length() != 2)
+      return 0;
+    curStr = curStr.substring(curStr.indexOf(",")+1);
+  }
+
+  // Verify packet id format and '}'
+  if(subStr.indexOf("}") == -1)
+    return 0;
+  if(subStr.substring(0, subStr.indexOf("}")).toInt() == 0) {
+    return 0;
+  }
+  
+  return 1;
+}
+
+
+
 void sampleBNO()
 {
   Serial.write("in BNO routine\n");
@@ -284,7 +318,7 @@ void sampleBNO()
   angles[MODULE_ID] = quatDiff(quats[MODULE_ID], quats[MODULE_ID+1]);
 }
 
-int packetCnt = 0;
+int packetCnt = 1;
 void bleTransmit() {
   Serial.write("in BLE routine\n");
   // Calculate angle between slave and master
