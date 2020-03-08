@@ -167,12 +167,15 @@ void setup() {
   delay(1000);
 
 //  Serial.write("Calibrating\n");
-  do {
+    do {
     bno.getCalibration(&systemCal, &gyro, &accel, &mag);
 //    Serial.write(".");
-//    Serial.println(systemCal);
+//    Serial.print("Gyro: ");
+//    Serial.print(gyro);
+//    Serial.print(", Mag: ");
+//    Serial.println(mag);
     delay(1000);
-  } while(systemCal != 3);
+  } while(gyro != 3 || mag != 3);
     
   digitalWrite(13, HIGH);
 
@@ -186,9 +189,10 @@ void setup() {
 void sampleBNO()
 {
 //  Serial.write("in BNO routine\n");
-//  do {
-//    bno.getCalibration(&systemCal, &gyro, &accel, &mag);
-//  }while(systemCal != 3);
+  bno.getCalibration(&systemCal, &gyro, &accel, &mag);
+  if(gyro != 3 || mag != 3){
+    return;
+  }
   
   quat = bno.getQuat();
   quats[MODULE_ID][0] = quat.w();
