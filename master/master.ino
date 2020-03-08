@@ -91,8 +91,8 @@ void setup()
   //Set Interval Timer Settings
   bnoSample.priority(1);
   bleTx.priority(0);
-  bnoSample.begin(sampleBNO, 250000);
-  bleTx.begin(bleTransmit, 500000);
+  bnoSample.begin(sampleBNO, hzToMicro(3));
+  bleTx.begin(bleTransmit, hzToMicro(3));
 }
 
 
@@ -350,4 +350,11 @@ void bleTransmit() {
 //    Serial.write(uartTx.c_str());
   BLE_SERIAL.write(uartTx.c_str());
 
+}
+
+
+
+int hzToMicro(int hz)
+{
+  return (1000000/hz);
 }
