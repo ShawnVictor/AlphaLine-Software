@@ -37,11 +37,11 @@ JSONObject plotterConfigJSON;
 String     topSketchPath = "";
 
 // List of Plot Positions
-int[] angle1_pos = {65,50};
-int[] angle2_pos = {445,50};
-int[] angle3_pos = {1585,50};
-int[] angle4_pos = {1205,50};
-int[] angle5_pos = {825,50};
+int[] angle1_pos = {265,50};
+int[] angle2_pos = {645,50};
+int[] angle3_pos = {1025,50};
+int[] angle4_pos = {1405,50};
+int[] angle5_pos = {1585,320};
 int[] angle6_pos = {65,320};
 
 //List of LineGraphs
@@ -53,15 +53,15 @@ Graph  angle5_linegraph  = new Graph(angle5_pos[0], angle5_pos[1], linegraph_wid
 Graph  angle6_linegraph  = new Graph(angle6_pos[0], angle6_pos[1], linegraph_width, linegraph_height, color(71, 71, 71));
 
 // Data Matrix for each LineGraph (rows are for each line graph within the single graph, columns are the datapoints)
-float[][] angle1_linegraph_values = new float[1][50];
-float[][] angle2_linegraph_values = new float[1][50];
-float[][] angle3_linegraph_values = new float[1][50];
-float[][] angle4_linegraph_values = new float[1][50];
-float[][] angle5_linegraph_values = new float[1][50];
-float[][] angle6_linegraph_values = new float[1][50];
+float[][] angle1_linegraph_values = new float[1][25];
+float[][] angle2_linegraph_values = new float[1][25];
+float[][] angle3_linegraph_values = new float[1][25];
+float[][] angle4_linegraph_values = new float[1][25];
+float[][] angle5_linegraph_values = new float[1][25];
+float[][] angle6_linegraph_values = new float[1][25];
 
 // Sample Data
-float[]   linegraph_sample = new float[50];
+float[]   linegraph_sample = new float[25];
 
 // Graph Colors
 color[] graphColors = new color[3];
